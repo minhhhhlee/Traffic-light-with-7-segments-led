@@ -1,0 +1,496 @@
+
+#include <stdio.h>
+
+
+#define segA 4//connecting segment A to PIN2
+#define segB 5// connecting segment B to PIN3
+#define segC 6// connecting segment C to PIN4
+#define segD 7// connecting segment D to PIN5
+#define segE 8// connecting segment E to PIN6
+#define segF 9// connecting segment F to PIN7
+#define segG 10// connecting segment G to PIN8
+              // VCC connect to 5V through a resistor 330 Ohm 
+
+const int ledx1=12;
+const int ledv1=11;
+const int ledd1=13;
+
+const int ledx2=A0;
+const int ledv2=A1;
+const int ledd2=A2;
+
+#define button1 A3	// mode
+#define button2 2	// up
+#define button3 3	// down
+
+
+void setup()
+
+{
+  
+  pinMode(ledx1,OUTPUT);
+  pinMode(ledv1,OUTPUT);
+  pinMode(ledd1,OUTPUT);
+  
+  pinMode(ledx2,OUTPUT);
+  pinMode(ledv2,OUTPUT);
+  pinMode(ledd2,OUTPUT);
+  
+  pinMode(button1,INPUT_PULLUP);
+  
+  pinMode (button2,INPUT_PULLUP);
+  pinMode (button3,INPUT_PULLUP);
+  
+
+
+   for (int i=4;i<11;i++)
+
+   {
+
+        pinMode(i, OUTPUT);// taking all pins from 2-8 as output
+
+   } // for led 7 segments
+  
+  Serial.begin(9600);
+  
+  attachInterrupt(digitalPinToInterrupt(button2),up,FALLING);
+  attachInterrupt(digitalPinToInterrupt(button3),down,FALLING);
+  
+   //========
+    cli();                                  // t?t ng?t toàn c?c
+    
+    /* Reset Timer/Counter1 */
+    TCCR1A = 0;
+    TCCR1B = 0;
+    TIMSK1 = 0;
+    
+    /* Setup Timer/Counter1 */
+    TCCR1B |= (1 << CS11) | (1 << CS10);    // prescale = 64
+    TCNT1 = 63036;
+    TIMSK1 = (1 << TOIE1);                  // Overflow interrupt enable 
+    sei();               
+
+}
+
+//=================================
+
+int COUNT=10;//count integer for 0-9 increment
+int x=0; // identify the color light
+int de=1000;	// delay
+
+int a=0; // bi?n d?m dùng cho mode
+
+
+int u=0; // for up & down
+int n=9; // thay d?i khi s? d?ng up
+int k=1; // thay d?i khi s? d?ng down
+int m =1; // bi?n dùng cho quét nút button1
+
+void mode()
+{
+  
+  
+   m = digitalRead(button1);	// quét nút button1
+  //Serial.println(a);
+  //Serial.println("-----");
+  if (m==0)
+  {
+    a++;
+    if (a==1) // gi? cao di?m, t?c d? d?m tang
+    {de=500;}
+  	
+    if (a==2||a==3)
+    {
+     	if (a==2)	// a==2 d? cài d?t dèn xanh 
+        {n=COUNT;}
+    	if (a==3)	// a==3 d? cài d?t dèn vàng
+        {k=n;}
+    }
+    if (a>3)
+    {
+      light_off();
+      COUNT=n+1;
+      x=0;
+      de=1000;
+      a=0;
+    }
+  	
+  }
+} 
+
+void up()
+{
+  if (a==2) // led xanh
+    {
+     if (COUNT==-1)
+     {u=0;}
+      u++;
+      if (u>9)
+      {u=0;}
+      
+      n=u;
+      Serial.print("n: ");Serial.println(n);
+    }
+  
+  if (a==3) // led vang
+  {
+   	  u++;
+      if (u>9)
+      {u=0;}
+      
+      k=u;
+      Serial.print("k: ");Serial.println(k);
+  }
+   
+}
+
+void down()
+{
+  if (a==2) // led xanh
+    {
+    if (COUNT==-1)
+     {u=0;}
+      u--;
+      if (u<0)
+      {u=9;}
+      
+      n=u;
+      Serial.print("n: ");Serial.println(n);
+    }
+  
+  if (a==3) // led vang
+  {
+   	  u--;
+      if (u<0)
+      {u=9;}
+      
+      k=u;
+      Serial.print("k: ");Serial.println(k);
+  }
+}
+
+
+
+void light_off()
+{
+	  digitalWrite(ledx1,0);
+      digitalWrite(ledv1,0);
+      digitalWrite(ledd1,0);
+      
+      digitalWrite(ledd2,0);
+      digitalWrite(ledv2,0);
+      digitalWrite(ledx2,0);
+}
+
+ISR (TIMER1_OVF_vect) 
+{
+    TCNT1 = 63036;
+    mode();
+  	//temp = analogRead(sensor);
+    //Serial.print(F("Temp:"));
+    //Serial.println(temp);
+}
+
+//==================
+void loop()
+{              
+  if(a==0||a==1)
+  {
+  	led(return_x(x));
+    count(COUNT);
+    u=COUNT;
+    //Serial.println(COUNT);
+  }
+  
+  //mode();
+  //Serial.println(a);
+  
+  
+  if (a==2) // setup ledx1
+  {
+   light_off();
+   digitalWrite(ledx1,1);
+   digitalWrite(ledd2,1);
+   
+    count(n);
+  }
+  
+  if (a==3) // setup ledv1
+  {
+   light_off();
+   digitalWrite(ledv1,1);
+   digitalWrite(ledd2,1);
+    
+    count(k);
+  }
+  //
+  serial();
+  
+}
+
+//===================
+void led(int x)
+  {
+  	if (x==0) // COUNT=9	// Xanh 1 sáng Ð? 2 sáng
+    {
+      digitalWrite(ledx1,1);
+      digitalWrite(ledv1,0);
+      digitalWrite(ledd1,0);
+      
+      digitalWrite(ledd2,1);
+      digitalWrite(ledv2,0);
+      digitalWrite(ledx2,0);
+      if (COUNT==n)
+      {
+      Serial.println("-----");
+      Serial.println("Green 1 on");
+      Serial.println("Red 2 on");
+      }
+    }
+    if (x==1) // COUNT=1	// Vàng 1 sáng Ð? 2 sáng
+    {
+      digitalWrite(ledx1,0);
+      digitalWrite(ledv1,1);
+      digitalWrite(ledd1,0);
+      
+      digitalWrite(ledd2,1);
+      digitalWrite(ledv2,0);
+      digitalWrite(ledx2,0);
+      
+      if (COUNT==k)
+      {
+      Serial.println("-----");
+      Serial.println("Yellow 1 on");
+      Serial.println("Red 2 on");
+      }
+    }
+  
+  	if (x==2) // COUNT=9	// Ð? 1 sáng Xanh 2 sáng
+    {
+   	  digitalWrite(ledx1,0);
+      digitalWrite(ledv1,0);
+      digitalWrite(ledd1,1);
+      
+      digitalWrite(ledd2,0);
+      digitalWrite(ledv2,0);
+      digitalWrite(ledx2,1);
+      
+      if (COUNT==n)
+      {
+      Serial.println("-----");
+      Serial.println("Red 1 on");
+      Serial.println("Green 2 on");
+      }
+    }
+  
+    if (x==3) // COUNT=1	// Ð? 1 sáng Vàng 2 sáng
+    {
+      digitalWrite(ledx1,0);
+      digitalWrite(ledv1,0);
+      digitalWrite(ledd1,1);
+      
+      digitalWrite(ledd2,0);
+      digitalWrite(ledv2,1);
+      digitalWrite(ledx2,0);
+      
+      if (COUNT==k)
+      {
+      Serial.println("-----");
+      Serial.println("Red 1 on");
+      Serial.println("Yellow 2 on");
+      }
+    }
+    
+  }
+
+int return_x(int a)
+{
+  if (COUNT>=-1)
+    {
+         COUNT--;
+         delay(de);///increment count integer for every second
+      
+      if (COUNT==-1)
+      {
+        x++;
+        //Serial.print(x);Serial.print(" ");
+        if (x==0)
+        {COUNT=n;} // default n=9
+        
+        if (x==1)
+        {COUNT=k;} // default k=1
+        
+        if (x==2)
+        {COUNT=n;} // default n=9
+        
+        if (x==3)
+        {COUNT=k;} // default k=1
+        
+        if (x>3)
+        {x=0;
+         COUNT=n;} // // default n=9
+        
+        
+        
+        //Serial.println(COUNT);
+      }
+    return x;
+}
+}
+
+void count(int x)
+{
+  switch (x)
+     {
+           	case 0://when count value is zero show”0” on disp
+                 digitalWrite(segA, LOW);
+                 digitalWrite(segB, LOW);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, LOW);
+                 digitalWrite(segE, LOW);
+                 digitalWrite(segF, LOW);
+                 digitalWrite(segG, HIGH);
+                 break;
+            case 1:// when count value is 1 show”1” on disp
+                 digitalWrite(segA, HIGH);
+                 digitalWrite(segB, LOW);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, HIGH);
+                 digitalWrite(segE, HIGH);
+                 digitalWrite(segF, HIGH);
+                 digitalWrite(segG, HIGH);
+                 break;
+            case 2:// when count value is 2 show”2” on disp
+                 digitalWrite(segA, LOW);
+                 digitalWrite(segB, LOW);
+                 digitalWrite(segC, HIGH);
+                 digitalWrite(segD, LOW);
+                 digitalWrite(segE, LOW);
+                 digitalWrite(segF, HIGH);
+                 digitalWrite(segG, LOW);
+                 break;
+            case 3:// when count value is 3 show”3” on disp
+                 digitalWrite(segA, LOW);
+                 digitalWrite(segB, LOW);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, LOW);
+                 digitalWrite(segE, HIGH);
+                 digitalWrite(segF, HIGH);
+                 digitalWrite(segG, LOW);
+                 break;
+            case 4:// when count value is 4 show”4” on disp
+                 digitalWrite(segA, HIGH);
+                 digitalWrite(segB, LOW);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, HIGH);
+                 digitalWrite(segE, HIGH);
+                 digitalWrite(segF, LOW);
+                 digitalWrite(segG, LOW);
+                 break;
+            case 5:// when count value is 5 show”5” on disp
+                 digitalWrite(segA, LOW);
+                 digitalWrite(segB, HIGH);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, LOW);
+                 digitalWrite(segE, HIGH);
+                 digitalWrite(segF, LOW);
+                 digitalWrite(segG, LOW);
+                 break;
+            case 6:// when count value is 6 show”6” on disp
+                 digitalWrite(segA, LOW);
+                 digitalWrite(segB, HIGH);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, LOW);
+                 digitalWrite(segE, LOW);
+                 digitalWrite(segF, LOW);
+                 digitalWrite(segG, LOW);
+                 break;
+            case 7:// when count value is 7 show”7” on disp
+                 digitalWrite(segA, LOW);
+                 digitalWrite(segB, LOW);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, HIGH);
+                 digitalWrite(segE, HIGH);
+                 digitalWrite(segF, HIGH);
+                 digitalWrite(segG, HIGH);
+                 break;
+            case 8:// when count value is 8 show”8” on disp
+                 digitalWrite(segA, LOW);
+                 digitalWrite(segB, LOW);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, LOW);
+                 digitalWrite(segE, LOW);
+                 digitalWrite(segF, LOW);
+                 digitalWrite(segG, LOW);
+                 break;
+            case 9:// when count value is 9 show”9” on disp
+                 digitalWrite(segA, LOW);
+                 digitalWrite(segB, LOW);
+                 digitalWrite(segC, LOW);
+                 digitalWrite(segD, LOW);
+                 digitalWrite(segE, HIGH);
+                 digitalWrite(segF, LOW);
+                 digitalWrite(segG, LOW);
+                 break;
+             break;
+     }
+    
+}
+
+void serial()
+{
+// Serial
+  
+  
+  	if (Serial.available()>0)
+    {
+    	String command = Serial.readStringUntil('/');
+      if (command.startsWith("green") && a==2)
+      {
+      	n=command.substring(5).toInt();
+        Serial.print("Green: ");Serial.print(n);Serial.println("s");
+      }
+      if (command.startsWith("yellow") && a==3)
+      {
+      	k=command.substring(6).toInt();
+        Serial.print("Yellow: ");Serial.print(k);Serial.println("s");
+      }   
+      
+      // mã l?nh: mode switch
+      bool mode = command.startsWith("mode");
+      if (mode == true)
+      {
+        if (command.substring(4).toInt() == 0)
+        {a=0;
+         x=0;
+         light_off();
+         COUNT=n+1;
+         Serial.println("Mode 0 on setting");
+         
+        }
+        
+        if (command.substring(4).toInt() == 1)
+        {a=1;
+         Serial.println("Mode 1 on setting");
+        }
+        
+        if (command.substring(4).toInt() == 2)
+        {a=2;
+         Serial.println("Mode 2 on setting");
+        }
+        
+        if (command.substring(4).toInt() == 3)
+        {a=3;
+         Serial.println("Mode 3 on setting");
+        }
+        
+      }
+    }	 
+}
+
+  
+  
+    
+
+
+
